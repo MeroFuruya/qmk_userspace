@@ -17,6 +17,41 @@
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
 
+// Pre-Decl
+
+bool is_mac_layer(void);
+
+// ----- Util
+
+void tap_code16_unmodded(uint16_t keycode) {
+  uint8_t mods = get_mods();
+  uint8_t weak_mods = get_weak_mods();
+
+  clear_mods();
+  clear_weak_mods();
+
+  tap_code16(keycode);
+
+  set_mods(mods);
+  set_weak_mods(weak_mods);
+}
+
+// ----- Key Definition
+
+#define DE_LPRN S(KC_8)  // (
+#define DE_RPRN S(KC_9)  // )
+#define DE_LBRC ALGR(KC_8)  // [
+#define DE_RBRC ALGR(KC_9)  // ]
+#define DE_LCBR ALGR(KC_7)  // {
+#define DE_RCBR ALGR(KC_0)  // }
+
+#define DE_MAC_LPRN S(KC_8)  // (
+#define DE_MAC_RPRN S(KC_9)  // )
+#define DE_MAC_LBRC A(KC_5)  // [
+#define DE_MAC_RBRC A(KC_6)  // ]
+#define DE_MAC_LCBR A(KC_8)  // {
+#define DE_MAC_RCBR A(KC_9)  // }
+
 // ----- Setup
 static uint32_t startup_time;
 
@@ -33,10 +68,90 @@ void eeconfig_init_user(void) {
 // ----- Key Codes
 
 enum custom_keycodes {
-  COD_AE = SAFE_RANGE,
-  COD_OE,
-  COD_UE,
+  PAREN = SAFE_RANGE, // ()
+  BRACKET, // []
+  BRACE, // {}
 };
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  bool mac_layer_active = is_mac_layer();
+
+  switch (keycode) {
+    case PAREN: {
+      if (!record->event.pressed) return true;
+      
+      if (!(get_mods() & MOD_MASK_SHIFT) && mac_layer_active) {
+        tap_code16_unmodded(DE_MAC_LPRN);
+        break;
+      }
+      
+      if ((get_mods() & MOD_MASK_SHIFT) && mac_layer_active) {
+        tap_code16_unmodded(DE_MAC_RPRN);
+        break;
+      }
+      
+      if (!(get_mods() & MOD_MASK_SHIFT) && !mac_layer_active) {
+        tap_code16_unmodded(DE_LPRN);
+        break;
+      }
+      
+      if ((get_mods() & MOD_MASK_SHIFT) && !mac_layer_active) {
+        tap_code16_unmodded(DE_RPRN);
+        break;
+      }
+    } break;
+
+    case BRACKET: {
+      if (!record->event.pressed) return true;
+      
+      if (!(get_mods() & MOD_MASK_SHIFT) && mac_layer_active) {
+        tap_code16_unmodded(DE_MAC_LBRC);
+        break;
+      }
+      
+      if ((get_mods() & MOD_MASK_SHIFT) && mac_layer_active) {
+        tap_code16_unmodded(DE_MAC_RBRC);
+        break;
+      }
+      
+      if (!(get_mods() & MOD_MASK_SHIFT) && !mac_layer_active) {
+        tap_code16_unmodded(DE_LBRC);
+        break;
+      }
+      
+      if ((get_mods() & MOD_MASK_SHIFT) && !mac_layer_active) {
+        tap_code16_unmodded(DE_RBRC);
+        break;
+      }
+    } break;
+    
+    case BRACE: {
+      if (!record->event.pressed) return true;
+      
+      if (!(get_mods() & MOD_MASK_SHIFT) && mac_layer_active) {
+        tap_code16_unmodded(DE_MAC_LCBR);
+        break;
+      }
+      
+      if ((get_mods() & MOD_MASK_SHIFT) && mac_layer_active) {
+        tap_code16_unmodded(DE_MAC_RCBR);
+        break;
+      }
+      
+      if (!(get_mods() & MOD_MASK_SHIFT) && !mac_layer_active) {
+        tap_code16_unmodded(DE_LCBR);
+        break;
+      }
+      
+      if ((get_mods() & MOD_MASK_SHIFT) && !mac_layer_active) {
+        tap_code16_unmodded(DE_RCBR);
+        break;
+      }
+    } break;
+  }
+
+  return true;
+}
 
 // ----- Combos
 
@@ -49,7 +164,6 @@ const uint16_t PROGMEM combo_keys_bootloader[] = {KC_J, KC_K, COMBO_END};
 combo_t key_combos[] = {
   [COMBO_BOOTLOADER] = COMBO(combo_keys_bootloader, QK_BOOT),
 };
-
 
 bool combo_should_trigger(uint16_t combo_index, combo_t *combo, uint16_t keycode, keyrecord_t *record) {
   switch (combo_index) {
@@ -76,6 +190,14 @@ enum layers {
   LAYER_CODING_WIN_FN,
   
 };
+
+bool is_mac_layer(void) {
+  uint8_t layer = get_highest_layer(layer_state | default_layer_state);
+  return layer == LAYER_STANDARD_MAC_BASE ||
+    layer == LAYER_STANDARD_MAC_FN ||
+    layer == LAYER_CODING_MAC_BASE ||
+    layer == LAYER_CODING_MAC_FN;
+}
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -120,8 +242,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [LAYER_CODING_MAC_BASE] = LAYOUT_iso_83(
     KC_ESC,   KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,                    KC_F12,   KC_DEL,             KC_MUTE,
     KC_GRV,   KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_MINS,                   KC_EQL,   KC_BSPC,            KC_PGUP,
-    KC_TAB,   KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     LSFT(KC_8),                KC_RBRC,                      KC_PGDN,
-    KC_ESC,   KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     LOPT(KC_5),  LOPT(KC_8),             KC_NUHS,  KC_ENT,             KC_HOME,
+    KC_TAB,   KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     PAREN,                     KC_RBRC,                      KC_PGDN,
+    KC_ESC,   KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     BRACKET,  BRACE,                     KC_NUHS,  KC_ENT,             KC_HOME,
     KC_LSFT,  KC_NUBS,  KC_Z,     KC_X,     KC_C,     KC_V,     KC_B,     KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,                             KC_RSFT,  KC_UP,
     KC_LCTL,  KC_LOPTN, KC_LCMMD,                               KC_SPC,                                 KC_RCMMD, MO(LAYER_CODING_MAC_FN),   KC_RCTL,  KC_LEFT,  KC_DOWN,  KC_RGHT
   ),
@@ -138,8 +260,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [LAYER_CODING_WIN_BASE] = LAYOUT_iso_83(
     KC_ESC,   KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,                    KC_F12,   KC_DEL,             KC_MUTE,
     KC_GRV,   KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_MINS,                   KC_EQL,   KC_BSPC,            KC_PGUP,
-    KC_TAB,   KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     KC_LBRC,                   KC_RBRC,                      KC_PGDN,
-    KC_ESC,   KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,                   KC_NUHS,  KC_ENT,             KC_HOME,
+    KC_TAB,   KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     PAREN,                     KC_RBRC,                      KC_PGDN,
+    KC_ESC,   KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     BRACKET,  BRACE,                     KC_NUHS,  KC_ENT,             KC_HOME,
     KC_LSFT,  KC_NUBS,  KC_Z,     KC_X,     KC_C,     KC_V,     KC_B,     KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,                             KC_RSFT,  KC_UP,
     KC_LCTL,  KC_LGUI,  KC_LALT,                                KC_SPC,                                 KC_RALT,  MO(LAYER_CODING_WIN_FN),   KC_RCTL,  KC_LEFT,  KC_DOWN,  KC_RGHT
   ),
